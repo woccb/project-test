@@ -46,3 +46,20 @@ The key's randomart image is:
 -t type
              Specifies the type of key to create.  The possible values are “rsa1” for protocol version 1 and “dsa”,
              “ecdsa” or “rsa” for protocol version 2.
+
+
+hang on
+坚持下去；不挂断；握住不放更多释义>>
+[网络短语]
+hang on 抓紧不放,坚持,坚持下去
+hang up on 因,挂断电话
+hang heavy on 伎受苦
+
+
+
+
+
+
+
+
+
