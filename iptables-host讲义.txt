@@ -1,0 +1,63 @@
+1,主机防火墙流程图，仅涉及到filter表，包含三个链，INPUT ,OUTPUT,FORWARD
+----> routing ------ forward -----> outgoing
+      decision                           ^ 
+         |                               |  
+         |                               |
+         v                               |
+        INPUT -----> ocal Process ---->OUTPUT       
+           
+2,清除默认规则：
+iptables -F    (flush)
+iptables -X     
+iptables -Z    (zero )
+
+2.1 允许内部人员的ssh登录
+iptables -A INPUT -p tcp --dport 22 -s 10.0.0.0/24 -j ACCEPT
+扩展：
+................................ 54532  ....................
+................................ 54323   124.23.251.23/27 ...   
+
+2.2 允许本机lo接口的进入和流出
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+
+2.3 配置防火墙的默认的禁止和允许规则（INPUT和FORWARD链为drop,OUTPUT为accept）
+iptables -P OUTPUT ACCEPT
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+
+2.4开启信任的ip段（允许IDC和办公网ip的访问）
+iptables -A INPUT -s 124.213.12.211/27 -p all -j ACCEPT  (IDC机房与本办公网)
+iptables -A INPUT -s 192.168.1.0/24 -p all -j ACCEPT（机房内部局域网）
+iptables -A INPUT -s 10.0.0.0/24 -p all -j ACCEPT （VPN访问允许）
+
+2.5 允许httpd服务无条件通过
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+
+2.6 允许icmp类协议通过,如果不想开，就不执行这条
+iptables -A INPUT -p icmp -m icmp --icmp-type any -j ACCEPT  （对所有的用户开放，如百度）
+iptables -A INPUT -p icmp -s 10.0.0.0/24 -m icmp --icmp-type any -j ACCEPT （仅对10网段）
+iptables -A INPUT -p icmp --icmp-type 8 -j ACCEPT (仅允许ping)
+
+2.7 允许关联的状态包通过
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+
+3,永久保存成配置文件（上面的未保存的规则在内存里。重启就会丢失）
+iptables -L -n
+3.1 /etc/init.d/iptables save
+3.2 iptables-save >/etc/sysconfig/iptables(默认的配置文件)
+
+3.3 直接修改防火墙的默认配置文件，然后重启服务也可以
+vim /etc/sysconfig/iptables (增，删，改)
+/etc/init.d/iptables restart  
+
+3.4 封堵特殊的ip（如DDOS攻击）
+iptables -I INPUT -s 121.14.234.16 -j DROP   (不接行号，会放到第一条里面去)
+iptables -L -n
+
+一般这些都是临时的ip，所以不用保存到配置文件里去
+
+iptables可以使用扩展模块来进行数据包的匹配，语法就是-mmodule_name,所以-m tcp的意思是使用tcp扩展模块的功能(tcp扩展模块提供了.dport,.tcp-flags,.sync等功能）其实只用-p tcp了话，iptables也会默认的使用-m tcp来调用tcp模块提供的功能。但是-p tcp和-m tcp是两个不同层面的东西，一个是说当前规则作用于tcp协议包，而后一是说明要使用iptables的tcp模块的功能
+
